@@ -356,3 +356,25 @@ iframe {
     font-size: 16px;
     box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #28a745;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    display: none;
+    animation: slideUp 0.3s ease-out;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+@keyframes slideUp {
+    from { bottom: -50px; opacity: 0; }
+    to { bottom: 20px; opacity: 1; }
+}

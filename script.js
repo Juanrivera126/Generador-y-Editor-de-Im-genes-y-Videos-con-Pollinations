@@ -67,6 +67,7 @@ const translations = {
         editedShort: "Editada",
         openBtnShort: "Abrir",
         downloadBtnShort: "Descargar",
+        apiKeySuccess: "¡API Key obtenida con éxito!",
         styles: {
             0: "Fotográfico", 1: "3D", 2: "Acuarela", 3: "Arte callejero", 4: "Arte digital",
             5: "Art Nouveau", 6: "Arte Pop", 7: "Barroco", 8: "Blanco y negro", 9: "Botero",
@@ -120,6 +121,7 @@ const translations = {
         editedShort: "Edited",
         openBtnShort: "Open",
         downloadBtnShort: "Download",
+        apiKeySuccess: "API Key obtained successfully!",
         styles: {
             0: "Photographic", 1: "3D", 2: "Watercolor", 3: "Street Art", 4: "Digital Art",
             5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Black and White", 9: "Botero",
@@ -173,6 +175,7 @@ const translations = {
         editedShort: "Modifiée",
         openBtnShort: "Ouvrir",
         downloadBtnShort: "Télécharger",
+        apiKeySuccess: "Clé API obtenue avec succès !",
         styles: {
             0: "Photographique", 1: "3D", 2: "Aquarelle", 3: "Art de rue", 4: "Art numérique",
             5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Noir et blanc", 9: "Botero",
@@ -310,6 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('apiKeyInput').value = apiKey;
         localStorage.setItem('pollinations_api_key', apiKey);
         window.history.replaceState(null, null, window.location.pathname + window.location.search);
+
+        // Mostrar notificación de éxito
+        const t = translations[savedLang];
+        setTimeout(() => showToast(t.apiKeySuccess), 500);
     }
 
     fetchAndPopulateModels().then(() => {
@@ -373,6 +380,16 @@ function initSlider() {
 function startAuthFlow() {
     const redirectUrl = window.location.href.split('#')[0];
     window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3500);
 }
 
 function saveKeyLocally() {
