@@ -1,0 +1,358 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #eff0f1;
+    margin: 0;
+    padding: 20px;
+    display: block;
+    /* Cambiado de flex para que el footer ocupe todo el ancho */
+}
+
+.container {
+    width: 1100px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    /* Centrado horizontal */
+}
+
+/* Language Selector */
+.language-selector {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.language-selector select {
+    padding: 8px 12px;
+    border: 2px solid #0082ff;
+    border-radius: 4px;
+    background-color: white;
+    color: #0082ff;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Tabs Header */
+.tabs {
+    display: flex;
+    background-color: #eff0f1;
+    border-bottom: 2px solid #ddd;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    /* Reducido de 15px */
+    border: none;
+    background-color: #e0e4e8;
+    color: #555;
+    font-size: 16px;
+    /* Reducido de 18px */
+    cursor: pointer;
+    transition: background 0.3s;
+    font-weight: bold;
+}
+
+.tab-btn.active {
+    background-color: #0082ff;
+    color: white;
+}
+
+/* Content Areas */
+.content {
+    display: flex;
+    flex-direction: row;
+    padding: 5px 10px;
+    height: 680px;
+    box-sizing: border-box;
+}
+
+.content.hidden {
+    display: none;
+}
+
+/* Left Controls */
+.controls {
+    width: 320px;
+    padding-right: 15px;
+    border-right: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-y: auto;
+}
+
+/* Right Preview */
+.preview {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: #fafafa;
+    margin-left: 10px;
+    padding: 0px 5px 10px 5px;
+    position: relative;
+    overflow-y: auto;
+}
+
+/* Inputs & Labels */
+label {
+    font-weight: bold;
+    color: #0072df;
+    margin-bottom: 1px;
+    display: block;
+    font-size: 12px;
+}
+
+select,
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+textarea {
+    width: 100%;
+    height: 45px;
+    padding: 6px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: none;
+    font-family: inherit;
+    box-sizing: border-box;
+    margin-bottom: 2px;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Botones */
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    transition: opacity 0.2s;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button.action-btn {
+    background-color: #007ef6;
+    color: white;
+    padding: 6px;
+    font-size: 14px;
+    width: 100%;
+    margin-top: 2px;
+}
+
+.comp-purple-btn {
+    background-color: #7f00ff;
+    color: white;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.comp-purple-btn:hover {
+    background-color: #6600cc;
+}
+
+button.trash-btn {
+    background-color: #222;
+    color: white;
+    padding: 5px 10px;
+}
+
+button.secondary-btn {
+    background-color: #7a00ff;
+    color: white;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+/* API Key Section (BYOP) */
+.api-key-container {
+    background: #eef7ff;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #cce5ff;
+    margin-bottom: 2px;
+}
+
+.api-row {
+    display: flex;
+    gap: 5px;
+}
+
+#getApiKeyBtn {
+    background-color: #28a745;
+    color: white;
+    white-space: nowrap;
+    padding: 0 10px;
+    font-size: 13px;
+}
+
+/* Recuadro y Zoom/Pan */
+#img-container {
+    border: 5px solid #0058fe;
+    border-radius: 5px;
+    overflow: hidden;
+    background-color: #fff;
+    transition: width 0.3s ease, height 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 400px;
+    height: 400px;
+    cursor: grab;
+    position: relative;
+}
+
+#img-container:active {
+    cursor: grabbing;
+}
+
+#img-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform-origin: center center;
+    display: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.zoom-control {
+    width: 80%;
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+input[type=range] {
+    width: 100%;
+    cursor: pointer;
+}
+
+/* Video Iframe */
+iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border: 5px solid #0081fe;
+    border-radius: 2px;
+}
+
+.loading-text {
+    font-size: 24px;
+    color: #20303a;
+    display: none;
+    position: absolute;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 20px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+.footer-text {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    word-break: break-all;
+    max-width: 90%;
+}
+
+/* --- COMPARISON SLIDER CSS --- */
+.comparison-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    margin: 5px 0 0 0;
+    /* Sustituido margin: auto para evitar saltos */
+    overflow: hidden;
+    border: 5px solid #0058fe;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    line-height: 0;
+    cursor: pointer;
+}
+
+.comparison-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+.comparison-image-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 50%;
+    overflow: hidden;
+}
+
+#new-comparison-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: auto;
+    max-width: none;
+}
+
+.comparison-slider {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    cursor: ew-resize;
+    z-index: 10;
+}
+
+.comparison-slider::after {
+    content: '↔';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #007ef6;
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
