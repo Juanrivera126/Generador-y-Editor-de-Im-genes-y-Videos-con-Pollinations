@@ -1,6 +1,6 @@
 # Generador y Editor de Imágenes y Videos con Pollinations
 
-Esta aplicación es una herramienta avanzada basada en la web que utiliza la potencia de **Pollinations AI** para la generación y edición de contenido visual. Ha sido diseñada con un enfoque en la experiencia de usuario (UX) premium, ofreciendo una interfaz limpia, compacta y altamente funcional.
+Esta aplicación es una herramienta avanzada basada en la web que utiliza la potencia de **(https://pollinations.ai/)** para la generación y edición de contenido visual. Ha sido diseñada con un enfoque en la experiencia de usuario (UX) premium, ofreciendo una interfaz limpia, compacta y altamente funcional.
 
 ## Características Principales
 
