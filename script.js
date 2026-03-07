@@ -1,5 +1,4 @@
 // --- CONFIGURACIÓN BASE ---
-const DEFAULT_API_KEY = "plln_sk_aTsFV3jrACFFUvZUHnK5dCwjc90IplP7";
 const GENERATE_URL = "https://enter.pollinations.ai/api/generate/image/";
 const MODELS_URL = "https://enter.pollinations.ai/api/generate/image/models";
 const GENERATE_VIDEO_URL = "https://enter.pollinations.ai/api/generate/video/";
@@ -68,6 +67,7 @@ const translations = {
         openBtnShort: "Abrir",
         downloadBtnShort: "Descargar",
         apiKeySuccess: "¡API Key obtenida con éxito!",
+        apiKeyRequired: "Por favor, ingresa tu Pollinations API Key u obtén una antes de continuar.",
         styles: {
             0: "Fotográfico", 1: "3D", 2: "Acuarela", 3: "Arte callejero", 4: "Arte digital",
             5: "Art Nouveau", 6: "Arte Pop", 7: "Barroco", 8: "Blanco y negro", 9: "Botero",
@@ -122,6 +122,7 @@ const translations = {
         openBtnShort: "Open",
         downloadBtnShort: "Download",
         apiKeySuccess: "API Key obtained successfully!",
+        apiKeyRequired: "Please enter your Pollinations API Key or get one before continuing.",
         styles: {
             0: "Photographic", 1: "3D", 2: "Watercolor", 3: "Street Art", 4: "Digital Art",
             5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Black and White", 9: "Botero",
@@ -176,6 +177,7 @@ const translations = {
         openBtnShort: "Ouvrir",
         downloadBtnShort: "Télécharger",
         apiKeySuccess: "Clé API obtenue avec succès !",
+        apiKeyRequired: "Veuillez entrer votre clé API Pollinations ou en obtenir une avant de continuer.",
         styles: {
             0: "Photographique", 1: "3D", 2: "Aquarelle", 3: "Art de rue", 4: "Art numérique",
             5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Noir et blanc", 9: "Botero",
@@ -398,8 +400,7 @@ function saveKeyLocally() {
 }
 
 function getApiKey() {
-    const inputKey = document.getElementById('apiKeyInput').value;
-    return inputKey.trim() !== "" ? inputKey : DEFAULT_API_KEY;
+    return document.getElementById('apiKeyInput').value.trim();
 }
 
 // ==========================================
@@ -543,6 +544,11 @@ function generateImage() {
     const style = getStyleName(document.getElementById('img_style').value);
     const model = document.getElementById('img_model').value;
     const key = getApiKey();
+    if (!key) {
+        alert(translations[currentLang].apiKeyRequired);
+        document.getElementById('apiKeyInput').focus();
+        return;
+    }
 
     // ESTRATEGIA MODELO.HTML: Prompt limpio + Key + Modelo
     const fullPrompt = `${promptValue}, ${style}`;
@@ -591,6 +597,10 @@ function applyEdit() {
 
     const model = document.getElementById('img_model').value;
     const key = getApiKey();
+    if (!key) {
+        alert(translations[currentLang].apiKeyRequired);
+        return;
+    }
     const t = translations[currentLang];
 
     // ESTRATEGIA MODELO.HTML: Changes + Key + Model + image(currentImageUrl)
@@ -636,6 +646,10 @@ function generateVideo() {
     const time = getDuration(document.getElementById('vid_time').value);
     const model = document.getElementById('vid_model').value;
     const key = getApiKey();
+    if (!key) {
+        alert(translations[currentLang].apiKeyRequired);
+        return;
+    }
     const seed = Math.floor(Math.random() * 9999);
 
     const source = document.querySelector('input[name="vid_source"]:checked').value;
