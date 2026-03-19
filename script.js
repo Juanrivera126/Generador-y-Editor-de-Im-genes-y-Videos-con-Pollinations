@@ -1,7 +1,6 @@
 // --- CONFIGURACIÓN BASE ---
-const GENERATE_URL = "https://enter.pollinations.ai/api/generate/image/";
-const MODELS_URL = "https://enter.pollinations.ai/api/generate/image/models";
-const GENERATE_VIDEO_URL = "https://enter.pollinations.ai/api/generate/video/";
+const GENERATE_URL = "https://gen.pollinations.ai/image/";
+const MODELS_URL = "https://gen.pollinations.ai/image/models";
 
 let currentImageUrl = "";
 let originalImageUrl = "";
@@ -17,12 +16,16 @@ let startY = 0;
 let isDragging = false;
 
 // --- LISTA FALLBACK ---
+// Modelos de video preferidos en orden de prioridad (grok-video excluido por inestabilidad)
+const PREFERRED_VIDEO_MODELS = ['veo', 'seedance', 'seedance-pro', 'wan', 'ltx-2', 'p-video'];
+
 const FALLBACK_MODELS = [
     { name: "flux", description: "Flux.1 (Schnell)", output_modalities: ["image"], input_modalities: ["text"] },
     { name: "flux-realism", description: "Flux Realism", output_modalities: ["image"], input_modalities: ["text"] },
     { name: "kontext", description: "Kontext (Editor)", output_modalities: ["image"], input_modalities: ["text", "image"] },
     { name: "turbo", description: "Turbo", output_modalities: ["image"], input_modalities: ["text"] },
-    { name: "luma", description: "Luma Ray", output_modalities: ["video"], input_modalities: ["text"] }
+    { name: "veo", description: "Veo (Video)", output_modalities: ["video"], input_modalities: ["text"] },
+    { name: "seedance", description: "Seedance (Video)", output_modalities: ["video"], input_modalities: ["text"] }
 ];
 
 // --- TRADUCCIONES ---
@@ -447,7 +450,18 @@ function populateSelects(models) {
     if (currentImg && imgSelect.querySelector(`option[value="${currentImg}"]`)) imgSelect.value = currentImg;
     else if (imgSelect.options.length > 0) imgSelect.selectedIndex = 0;
 
-    if (currentVid && vidSelect.querySelector(`option[value="${currentVid}"]`)) vidSelect.value = currentVid;
+    // Para video: respetar selección previa o elegir el mejor modelo disponible
+    if (currentVid && vidSelect.querySelector(`option[value="${currentVid}"]`)) {
+        vidSelect.value = currentVid;
+    } else {
+        // Intentar seleccionar el primer modelo preferido que esté disponible
+        let selected = false;
+        for (const preferred of PREFERRED_VIDEO_MODELS) {
+            const opt = vidSelect.querySelector(`option[value="${preferred}"]`);
+            if (opt) { vidSelect.value = preferred; selected = true; break; }
+        }
+        if (!selected && vidSelect.options.length > 0) vidSelect.selectedIndex = 0;
+    }
 }
 
 // ==========================================
@@ -639,35 +653,199 @@ function applyEdit() {
     });
 }
 
-function generateVideo() {
+// ==========================================
+// BARRA DE PROGRESO DE VIDEO
+// ==========================================
+let _vidProgressTimer = null;
+let _vidProgressValue = 0;
+
+function startVideoProgress(labelText) {
+    // Resetear
+    _vidProgressValue = 0;
+    clearInterval(_vidProgressTimer);
+
+    const bar   = document.getElementById('vid_progress_bar');
+    const pct   = document.getElementById('vid_progress_pct');
+    const label = document.getElementById('vid_progress_label');
+    const wrap  = document.getElementById('vid_progress_wrap');
+
+    if (!wrap) return;
+    wrap.style.display = 'block';
+    bar.style.width = '0%';
+    pct.textContent = '0%';
+    label.textContent = labelText || '…';
+
+    // Simular progreso: rápido hasta ~60%, luego más lento hasta ~90%
+    _vidProgressTimer = setInterval(() => {
+        if (_vidProgressValue < 60)       _vidProgressValue += 1.8;
+        else if (_vidProgressValue < 85)  _vidProgressValue += 0.4;
+        else if (_vidProgressValue < 92)  _vidProgressValue += 0.08;
+        // Se detiene cerca de 92% esperando la respuesta real
+
+        _vidProgressValue = Math.min(_vidProgressValue, 92);
+        bar.style.width  = _vidProgressValue.toFixed(1) + '%';
+        pct.textContent  = Math.floor(_vidProgressValue) + '%';
+    }, 280);
+}
+
+function updateVideoProgressLabel(labelText) {
+    const label = document.getElementById('vid_progress_label');
+    if (label) label.textContent = labelText;
+}
+
+function stopVideoProgress(success) {
+    clearInterval(_vidProgressTimer);
+    _vidProgressTimer = null;
+
+    const bar  = document.getElementById('vid_progress_bar');
+    const pct  = document.getElementById('vid_progress_pct');
+    const wrap = document.getElementById('vid_progress_wrap');
+
+    if (!wrap) return;
+
+    if (success) {
+        // Completar al 100% con breve animación
+        _vidProgressValue = 100;
+        bar.style.width  = '100%';
+        pct.textContent  = '100%';
+        bar.style.background = 'linear-gradient(90deg, #28a745, #5cb85c)';
+        bar.style.animation  = 'none';
+        setTimeout(() => { wrap.style.display = 'none'; bar.style.background = ''; bar.style.animation = ''; }, 1200);
+    } else {
+        wrap.style.display = 'none';
+        bar.style.width = '0%';
+        pct.textContent = '0%';
+    }
+}
+
+async function generateVideo() {
     const prompt = document.getElementById('vid_prompt').value;
     const style = getStyleName(document.getElementById('vid_style').value);
     const dims = getVideoDims(document.getElementById('vid_ratio').value);
     const time = getDuration(document.getElementById('vid_time').value);
-    const model = document.getElementById('vid_model').value;
     const key = getApiKey();
     if (!key) {
         alert(translations[currentLang].apiKeyRequired);
         return;
     }
     const seed = Math.floor(Math.random() * 9999);
-
     const source = document.querySelector('input[name="vid_source"]:checked').value;
-    // ESTRATEGIA: Usar GENERATE_VIDEO_URL para videos
-    let url = `${GENERATE_VIDEO_URL}${encodeURIComponent(prompt)},${style} style?key=${key}&duration=${time}&model=${model}&seed=${seed}`;
 
+    const vidSelect = document.getElementById('vid_model');
+    const selectedModel = vidSelect.value;
+    const availableOptions = Array.from(vidSelect.options).map(o => o.value);
+
+    // Cola: modelo elegido primero; luego los preferidos que estén disponibles
+    const modelsQueue = [
+        selectedModel,
+        ...PREFERRED_VIDEO_MODELS.filter(m => m !== selectedModel && availableOptions.includes(m))
+    ];
+
+    // Parámetros de dimensiones
+    const dimMatch = dims.match(/width=(\d+)&height=(\d+)/);
+    const widthParam  = dimMatch ? `&width=${dimMatch[1]}`  : '';
+    const heightParam = dimMatch ? `&height=${dimMatch[2]}` : '';
+
+    // Parámetro de imagen de referencia
+    let imageParam = '';
     if (source === 'image' && currentImageUrl) {
-        url += `&image=${encodeURIComponent(currentImageUrl)}`;
+        imageParam = `&image=${encodeURIComponent(currentImageUrl)}`;
     } else if (source === 'original' && originalImageUrl) {
-        url += `&image=${encodeURIComponent(originalImageUrl)}`;
+        imageParam = `&image=${encodeURIComponent(originalImageUrl)}`;
     }
 
-    document.getElementById('vid_loading').style.display = 'block';
-    const iframe = document.getElementById('vid-iframe');
-    iframe.style.display = 'none';
-    iframe.src = url;
-    iframe.style.display = 'block';
-    setTimeout(() => { document.getElementById('vid_loading').style.display = 'none'; }, 2000);
+    // Mostrar loading, ocultar reproductores anteriores
+    const loadingEl = document.getElementById('vid_loading');
+    const videoEl   = document.getElementById('vid-player');
+    const iframe    = document.getElementById('vid-iframe');
+    loadingEl.style.display = 'block';
+    if (videoEl) { videoEl.style.display = 'none'; videoEl.src = ''; }
+    if (iframe)  { iframe.style.display  = 'none'; iframe.src  = ''; }
+
+    // Iniciar barra de progreso simulada
+    startVideoProgress(translations[currentLang].generatingVideo);
+
+    const fullPrompt = encodeURIComponent(`${prompt},${style} style`);
+    let lastError = null;
+
+    for (let i = 0; i < modelsQueue.length; i++) {
+        const model = modelsQueue[i];
+
+        // Actualizar selector y mensaje de estado
+        if (vidSelect.querySelector(`option[value="${model}"]`)) vidSelect.value = model;
+        const statusMsg = i === 0
+            ? translations[currentLang].generatingVideo
+            : `${translations[currentLang].generatingVideo} (${model}…)`;
+        loadingEl.textContent = statusMsg;
+        if (i > 0) {
+            // Reiniciar barra en cada reintento con nuevo modelo
+            startVideoProgress(statusMsg);
+        } else {
+            updateVideoProgressLabel(translations[currentLang].generatingVideo);
+        }
+
+        const apiUrl = `https://gen.pollinations.ai/video/${fullPrompt}?duration=${time}&model=${model}&seed=${seed}${widthParam}${heightParam}${imageParam}`;
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${key}` }
+            });
+
+            if (!response.ok) {
+                let errMsg = `Error ${response.status}`;
+                try {
+                    const errJson = await response.json();
+                    errMsg = errJson.message || errJson.error?.message || errMsg;
+                } catch(e) {}
+
+                // 429 o 500 → reintentar con siguiente modelo si hay
+                if ((response.status === 429 || response.status === 500) && i < modelsQueue.length - 1) {
+                    console.warn(`Modelo "${model}" falló (${response.status}), probando siguiente…`);
+                    lastError = errMsg;
+                    continue;
+                }
+                throw new Error(errMsg);
+            }
+
+            // ✅ Éxito: mostrar video como blob
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+
+            if (videoEl && videoEl._blobUrl) URL.revokeObjectURL(videoEl._blobUrl);
+
+            if (videoEl) {
+                videoEl._blobUrl = blobUrl;
+                videoEl.src = blobUrl;
+                videoEl.style.display = 'block';
+                videoEl.load();
+                videoEl.play().catch(() => {});
+            } else if (iframe) {
+                iframe.src = blobUrl;
+                iframe.style.display = 'block';
+            }
+
+            stopVideoProgress(true);
+            loadingEl.style.display = 'none';
+            return;
+
+        } catch (error) {
+            lastError = error.message;
+            if (i < modelsQueue.length - 1) {
+                console.warn(`Modelo "${model}" falló, probando siguiente…`, error.message);
+                continue;
+            }
+        }
+    }
+
+    // Todos los modelos fallaron
+    stopVideoProgress(false);
+    loadingEl.style.display = 'none';
+    console.error('Todos los modelos de video fallaron. Último error:', lastError);
+    alert((currentLang === 'es'
+        ? '⚠️ No se pudo generar el video con ningún modelo disponible.\n\nÚltimo error: '
+        : '⚠️ Could not generate the video with any available model.\n\nLast error: ')
+        + lastError);
 }
 
 function toggleVideoPrompt(show) {
