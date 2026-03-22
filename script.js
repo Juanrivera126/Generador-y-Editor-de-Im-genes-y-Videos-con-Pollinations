@@ -564,9 +564,12 @@ function generateImage() {
         return;
     }
 
-    // ESTRATEGIA MODELO.HTML: Prompt limpio + Key + Modelo
+    const ratioVal = document.getElementById('img_ratio').value;
+    const dims = getImageDims(ratioVal);
+
+    // ESTRATEGIA MODELO.HTML: Prompt limpio + Key + Modelo + Dims
     const fullPrompt = `${promptValue}, ${style}`;
-    const url = `${GENERATE_URL}${encodeURIComponent(fullPrompt)}?key=${key}&model=${model}`;
+    const url = `${GENERATE_URL}${encodeURIComponent(fullPrompt)}?key=${key}&model=${model}&${dims}`;
 
     document.getElementById('img_loading').style.display = 'block';
     document.getElementById('img_loading').textContent = translations[currentLang].generatingImage;
@@ -617,8 +620,11 @@ function applyEdit() {
     }
     const t = translations[currentLang];
 
-    // ESTRATEGIA MODELO.HTML: Changes + Key + Model + image(currentImageUrl)
-    const editUrl = `${GENERATE_URL}${encodeURIComponent(changes)}?key=${key}&model=${model}&image=${encodeURIComponent(currentImageUrl)}`;
+    const ratioVal = document.getElementById('img_ratio').value;
+    const dims = getImageDims(ratioVal);
+
+    // ESTRATEGIA MODELO.HTML: Changes + Key + Model + image(currentImageUrl) + Dims
+    const editUrl = `${GENERATE_URL}${encodeURIComponent(changes)}?key=${key}&model=${model}&image=${encodeURIComponent(currentImageUrl)}&${dims}`;
 
     document.getElementById('img_loading').style.display = 'block';
     document.getElementById('img_loading').textContent = t.generatingEdit;
