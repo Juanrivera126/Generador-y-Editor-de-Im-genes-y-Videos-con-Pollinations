@@ -403,3 +403,28 @@ iframe {
     from { bottom: -50px; opacity: 0; }
     to { bottom: 20px; opacity: 1; }
 }
+
+/* Estilos para la zona de carga de archivos */
+.drop-zone {
+    border: 2px dashed #0082ff;
+    background: #f0f7ff;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-bottom: 10px;
+    color: #0072df;
+    font-size: 13px;
+}
+.drop-zone.dragover {
+    background: #0082ff;
+    color: white;
+}
+.status-msg {
+    font-size: 12px;
+    font-weight: bold;
+    color: #28a745;
+    margin-bottom: 5px;
+    text-align: center;
+}

@@ -4,8 +4,9 @@ const MODELS_URL = "https://gen.pollinations.ai/image/models";
 
 let currentImageUrl = "";
 let originalImageUrl = "";
-let previousImageUrl = ""; // Guardar la imagen anterior para comparar
-let editorModels = []; // Modelos que soportan edición (text + image)
+let previousImageUrl = ""; 
+let editorModels = []; 
+let isUploading = false;
 
 // --- VARIABLES PARA PAN & ZOOM ---
 let scale = 1;
@@ -15,935 +16,171 @@ let startX = 0;
 let startY = 0;
 let isDragging = false;
 
-// --- LISTA FALLBACK ---
-// Modelos de video preferidos en orden de prioridad (grok-video excluido por inestabilidad)
+// --- MODELOS DE VIDEO PREFERIDOS ---
 const PREFERRED_VIDEO_MODELS = ['veo', 'seedance', 'seedance-pro', 'wan', 'ltx-2', 'p-video'];
 
 const FALLBACK_MODELS = [
     { name: "flux", description: "Flux.1 (Schnell)", output_modalities: ["image"], input_modalities: ["text"] },
-    { name: "flux-realism", description: "Flux Realism", output_modalities: ["image"], input_modalities: ["text"] },
     { name: "kontext", description: "Kontext (Editor)", output_modalities: ["image"], input_modalities: ["text", "image"] },
-    { name: "turbo", description: "Turbo", output_modalities: ["image"], input_modalities: ["text"] },
-    { name: "veo", description: "Veo (Video)", output_modalities: ["video"], input_modalities: ["text"] },
-    { name: "seedance", description: "Seedance (Video)", output_modalities: ["video"], input_modalities: ["text"] }
+    { name: "veo", description: "Veo (Video)", output_modalities: ["video"], input_modalities: ["text"] }
 ];
 
 // --- TRADUCCIONES ---
 const translations = {
     es: {
-        title: "Generador Pollinations (BYOP + Pan/Zoom)",
-        titleEditor: "Generador y editor de imágenes",
-        tabImages: "Imágenes",
-        tabVideos: "Videos",
-        apiKeyLabel: "Pollinations API Key",
-        getKeyBtn: "🔑 Obtener",
-        modelLabel: "Modelo",
-        promptLabel: "Prompt",
-        dimensionsLabel: "Dimensiones",
-        styleLabel: "Estilo",
-        generateImageBtn: "Generar Imagen",
-        generateVideoBtn: "Generar Video",
-        imageGeneratorTitle: "Generador de Imágenes",
-        imageEditorTitle: "Generador y editor de imágenes",
-        videoGeneratorTitle: "Generador de Videos",
+        apiKeyRequired: "Por favor, ingresa tu Pollinations API Key.",
         generatingImage: "¡Generando imagen!",
         generatingEdit: "¡Aplicando cambios!",
         generatingVideo: "¡Generando video!",
-        downloadBtn: "Descargar imagen",
-        openBtn: "Abrir imagen",
-        scaleLabel: "Escala (Zoom)",
-        durationLabel: "Duración",
-        apiKeyNote: "Usa la API Key configurada en la pestaña Imágenes.",
-        selectStyle: "Selecciona",
-        defaultPrompt: "Cinco lindas brujas caminando por París",
-        editPlaceholder: "Ej: Cambia las brujas por gatos con sombreros...",
-        applyEditBtn: "Aplicar cambios",
-        resetBtn: "Reiniciar",
-        vidPromptSource: "Prompt de texto",
-        vidOriginalSource: "Usar imagen original",
-        vidImageSource: "Usar imagen editada",
-        noImageAlert: "No hay una imagen disponible para usar. Genera o edita una imagen primero.",
-        originalImageLabel: "🖼️ Imagen Original",
-        editedImageLabel: "✨ Imagen Editada",
-        originalShort: "Original",
-        editedShort: "Editada",
-        openBtnShort: "Abrir",
-        downloadBtnShort: "Descargar",
+        uploading: "🚀 Subiendo a la nube...",
+        uploadSuccess: "✅ Imagen cargada y lista",
+        uploadError: "❌ Error al subir",
+        noImageAlert: "Primero genera o sube una imagen base.",
         apiKeySuccess: "¡API Key obtenida con éxito!",
-        apiKeyRequired: "Por favor, ingresa tu Pollinations API Key u obtén una antes de continuar.",
-        styles: {
-            0: "Fotográfico", 1: "3D", 2: "Acuarela", 3: "Arte callejero", 4: "Arte digital",
-            5: "Art Nouveau", 6: "Arte Pop", 7: "Barroco", 8: "Blanco y negro", 9: "Botero",
-            10: "Cartoon", 11: "Comic", 12: "Cubismo", 13: "Dibujo a lápiz", 14: "Disney",
-            15: "Expresionismo", 16: "Fantasía", 17: "Fauvismo", 19: "Futurista",
-            20: "Hiperrealista", 21: "Ilustración", 22: "Impresionismo", 23: "Isométrico",
-            24: "Japonés (Ukiyo-e)", 25: "Japanese Woodblock", 26: "Manga", 27: "Minimalismo",
-            28: "Neón", 29: "Óleo", 30: "Origami", 31: "Pintura abstracta", 32: "Pixar",
-            33: "Pixelado", 34: "Plastilina", 35: "Realista", 36: "Renacimiento",
-            37: "Surrealismo", 38: "Textura", 39: "Van Gogh", 40: "Vintage", 41: "Graffiti",
-            42: "Vitral", 43: "Mosaico", 44: "Art Deco", 45: "Steampunk", 46: "Cyberpunk",
-            47: "Vaporwave", 48: "Low Poly", 49: "Boceto", 50: "Carboncillo"
-        }
+        downloading: "Descargando..."
     },
     en: {
-        title: "Pollinations Generator (BYOP + Pan/Zoom)",
-        titleEditor: "Image Generator and Editor",
-        tabImages: "Images",
-        tabVideos: "Videos",
-        apiKeyLabel: "Pollinations API Key",
-        getKeyBtn: "🔑 Get Key",
-        modelLabel: "Model",
-        promptLabel: "Prompt",
-        dimensionsLabel: "Dimensions",
-        styleLabel: "Style",
-        generateImageBtn: "Generate Image",
-        generateVideoBtn: "Generate Video",
-        imageGeneratorTitle: "Image Generator",
-        imageEditorTitle: "Image Generator and Editor",
-        videoGeneratorTitle: "Video Generator",
+        apiKeyRequired: "Please enter your Pollinations API Key.",
         generatingImage: "Generating image!",
         generatingEdit: "Applying changes!",
         generatingVideo: "Generating video!",
-        downloadBtn: "Download image",
-        openBtn: "Open image",
-        scaleLabel: "Scale (Zoom)",
-        durationLabel: "Duration",
-        apiKeyNote: "Use the API Key configured in the Images tab.",
-        selectStyle: "Select",
-        defaultPrompt: "Five beautiful witches walking through Paris",
-        editPlaceholder: "Ex: Change the witches for cats with hats...",
-        applyEditBtn: "Apply changes",
-        resetBtn: "Restart",
-        vidPromptSource: "Text Prompt",
-        vidOriginalSource: "Use original image",
-        vidImageSource: "Use edited image",
-        noImageAlert: "No image available. Please generate or edit an image first.",
-        originalImageLabel: "🖼️ Original Image",
-        editedImageLabel: "✨ Edited Image",
-        originalShort: "Original",
-        editedShort: "Edited",
-        openBtnShort: "Open",
-        downloadBtnShort: "Download",
+        uploading: "🚀 Uploading to cloud...",
+        uploadSuccess: "✅ Image ready",
+        uploadError: "❌ Upload error",
+        noImageAlert: "Generate or upload a base image first.",
         apiKeySuccess: "API Key obtained successfully!",
-        apiKeyRequired: "Please enter your Pollinations API Key or get one before continuing.",
-        styles: {
-            0: "Photographic", 1: "3D", 2: "Watercolor", 3: "Street Art", 4: "Digital Art",
-            5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Black and White", 9: "Botero",
-            10: "Cartoon", 11: "Comic", 12: "Cubism", 13: "Pencil Sketch", 14: "Disney",
-            15: "Expressionism", 16: "Fantasy", 17: "Fauvism", 19: "Futuristic",
-            20: "Hyper-Realistic", 21: "Illustration", 22: "Impressionism", 23: "Isometric",
-            24: "Japanese (Ukiyo-e)", 25: "Japanese Woodblock", 26: "Manga", 27: "Minimalism",
-            28: "Neon", 29: "Oil Painting", 30: "Origami", 31: "Abstract Painting", 32: "Pixar",
-            33: "Pixel Art", 34: "Claymation", 35: "Realism", 36: "Renaissance",
-            37: "Surrealism", 38: "Texture", 39: "Van Gogh", 40: "Vintage", 41: "Graffiti",
-            42: "Stained Glass", 43: "Mosaic", 44: "Art Deco", 45: "Steampunk", 46: "Cyberpunk",
-            47: "Vaporwave", 48: "Low Poly", 49: "Sketch", 50: "Charcoal"
-        }
-    },
-    fr: {
-        title: "Générateur Pollinations (BYOP + Pan/Zoom)",
-        titleEditor: "Générateur et éditeur d'images",
-        tabImages: "Images",
-        tabVideos: "Vidéos",
-        apiKeyLabel: "Clé API Pollinations",
-        getKeyBtn: "🔑 Obtenir",
-        modelLabel: "Modèle",
-        promptLabel: "Prompt",
-        dimensionsLabel: "Dimensions",
-        styleLabel: "Style",
-        generateImageBtn: "Générer une image",
-        generateVideoBtn: "Générer une vidéo",
-        imageGeneratorTitle: "Générateur d'images",
-        imageEditorTitle: "Générateur et éditeur d'images",
-        videoGeneratorTitle: "Générateur de vidéos",
-        generatingImage: "Génération de l'image!",
-        generatingEdit: "Application des changements!",
-        generatingVideo: "Génération de la vidéo!",
-        downloadBtn: "Télécharger l'image",
-        openBtn: "Ouvrir l'image",
-        scaleLabel: "Échelle (Zoom)",
-        durationLabel: "Durée",
-        apiKeyNote: "Utilisez la clé API configurée dans l'onglet Images.",
-        selectStyle: "Sélectionner",
-        defaultPrompt: "Cinve belles sorcières marchant dans Paris",
-        editPlaceholder: "Ex: Changez les sorcières pour des chats avec des chapeaux...",
-        applyEditBtn: "Appliquer les changements",
-        resetBtn: "Réinitialiser",
-        vidPromptSource: "Prompt de texte",
-        vidOriginalSource: "Utiliser l'image originale",
-        vidImageSource: "Utiliser l'image modifiée",
-        noImageAlert: "Aucune image disponible. Veuillez d'abord générer ou modifier une image.",
-        originalImageLabel: "🖼️ Image Originale",
-        editedImageLabel: "✨ Image Modifiée",
-        originalShort: "Originale",
-        editedShort: "Modifiée",
-        openBtnShort: "Ouvrir",
-        downloadBtnShort: "Télécharger",
-        apiKeySuccess: "Clé API obtenue avec succès !",
-        apiKeyRequired: "Veuillez entrer votre clé API Pollinations ou en obtenir une avant de continuer.",
-        styles: {
-            0: "Photographique", 1: "3D", 2: "Aquarelle", 3: "Art de rue", 4: "Art numérique",
-            5: "Art Nouveau", 6: "Pop Art", 7: "Baroque", 8: "Noir et blanc", 9: "Botero",
-            10: "Dessin animé", 11: "Bande dessinée", 12: "Cubisme", 13: "Croquis au crayon", 14: "Disney",
-            15: "Expressionnisme", 16: "Fantaisie", 17: "Fauvisme", 19: "Futuriste",
-            20: "Hyper-réaliste", 21: "Illustration", 22: "Impressionnisme", 23: "Isométrique",
-            24: "Japonais (Ukiyo-e)", 25: "Gravure japonaise", 26: "Manga", 27: "Minimalisme",
-            28: "Néon", 29: "Peinture à l'huile", 30: "Origami", 31: "Peinture abstraite", 32: "Pixar",
-            33: "Pixel Art", 34: "Pâte à modeler", 35: "Réalisme", 36: "Renaissance",
-            37: "Surréalisme", 38: "Texture", 39: "Van Gogh", 40: "Vintage", 41: "Graffiti",
-            42: "Vitrail", 43: "Mosaïque", 44: "Art Déco", 45: "Steampunk", 46: "Cyberpunk",
-            47: "Vaporwave", 48: "Low Poly", 49: "Esquisse", 50: "Fusain"
-        }
+        downloading: "Downloading..."
     }
 };
 
 let currentLang = 'es';
 
 // ==========================================
-// CAMBIO DE IDIOMA
-// ==========================================
-
-function changeLanguage(lang) {
-    currentLang = lang;
-    const t = translations[lang];
-
-    // Si el modelo actual es editor, usar el título de editor
-    const imgModel = document.getElementById('img_model').value;
-    const isEditor = editorModels.includes(imgModel);
-
-    document.title = isEditor ? t.titleEditor : t.title;
-    document.querySelector('.tab-btn:nth-child(1)').textContent = t.tabImages;
-    document.querySelector('.tab-btn:nth-child(2)').textContent = t.tabVideos;
-
-    document.querySelector('label[for="apiKeyInput"]').textContent = t.apiKeyLabel;
-    document.getElementById('getApiKeyBtn').innerHTML = t.getKeyBtn;
-
-    document.querySelectorAll('label').forEach(label => {
-        const text = label.textContent.trim();
-        if (text === 'Modelo' || text === 'Model' || text === 'Modèle') label.textContent = t.modelLabel;
-        if (text === 'Prompt') label.textContent = t.promptLabel;
-        if (text === 'Dimensiones' || text === 'Dimensions') label.textContent = t.dimensionsLabel;
-        if (text === 'Estilo' || text === 'Style') label.textContent = t.styleLabel;
-        if (text === 'Duración' || text === 'Duration' || text === 'Durée') label.textContent = t.durationLabel;
-        if (text.includes('Escala') || text.includes('Scale') || text.includes('Échelle')) label.textContent = t.scaleLabel;
-    });
-
-    document.querySelector('button[onclick="generateImage()"]').textContent = t.generateImageBtn;
-    document.querySelector('button[onclick="generateVideo()"]').textContent = t.generateVideoBtn;
-
-    document.getElementById('img_title').textContent = isEditor ? t.imageEditorTitle : t.imageGeneratorTitle;
-    document.querySelector('#tab-video .preview h2').textContent = t.videoGeneratorTitle;
-
-    document.getElementById('img_loading').textContent = t.generatingImage;
-    document.getElementById('vid_loading').textContent = t.generatingVideo;
-
-    document.getElementById('btn-download').textContent = t.downloadBtn;
-    document.getElementById('btn-open').textContent = t.openBtn;
-
-    const editSection = document.getElementById('edit-section');
-    if (editSection) {
-        editSection.querySelector('label').innerHTML = `✍️ ${t.applyEditBtn}:`;
-        document.getElementById('edit_prompt').placeholder = t.editPlaceholder;
-        editSection.querySelector('button[onclick="applyEdit()"]').textContent = t.applyEditBtn;
-        document.getElementById('btn-reset').textContent = t.resetBtn;
-    }
-
-    const compButtons = document.getElementById('comparison-buttons');
-    if (compButtons) {
-        compButtons.querySelector('.lbl-original').textContent = `🖼️ ${t.originalShort}`;
-        compButtons.querySelector('.lbl-edited').textContent = `✨ ${t.editedShort}`;
-        compButtons.querySelectorAll('button').forEach(btn => {
-            const btnText = btn.textContent.trim();
-            if (btnText === 'Abrir' || btnText === 'Open' || btnText === 'Ouvrir') btn.textContent = t.openBtnShort;
-            if (btnText === 'Descargar' || btnText === 'Download' || btnText === 'Télécharger') btn.textContent = t.downloadBtnShort;
-        });
-    }
-
-    const apiNote = document.querySelector('#tab-video .controls > div:first-child');
-    if (apiNote) apiNote.innerHTML = `<i class="fas fa-info-circle"></i> ${t.apiKeyNote}`;
-
-    const lblPromptSrc = document.getElementById('lbl_vid_prompt_src');
-    if (lblPromptSrc) lblPromptSrc.textContent = t.vidPromptSource;
-    const lblOrigSrc = document.getElementById('lbl_vid_orig_src');
-    if (lblOrigSrc) lblOrigSrc.textContent = t.vidOriginalSource;
-    const lblImgSrc = document.getElementById('lbl_vid_img_src');
-    if (lblImgSrc) lblImgSrc.textContent = t.vidImageSource;
-
-    const appFooter = document.getElementById('app-footer');
-    if (appFooter) {
-        const footerText = lang === 'es'
-            ? `Diseñado por <strong>Juan Guillermo Rivera Berrío</strong> con las API de Pollinations, tecnología Gemini 1.5 Flash y asistencia de Antigravity`
-            : lang === 'fr'
-                ? `Conçu par <strong>Juan Guillermo Rivera Berrío</strong> avec les API Pollinations, la technologie Gemini 1.5 Flash et l'assistance d'Antigravity`
-                : `Designed by <strong>Juan Guillermo Rivera Berrío</strong> with Pollinations APIs, Gemini 1.5 Flash technology, and Antigravity assistance`;
-        appFooter.innerHTML = footerText;
-    }
-
-    updateStyleOptions('img_style', t);
-    updateStyleOptions('vid_style', t);
-
-    localStorage.setItem('preferred_language', lang);
-}
-
-function updateStyleOptions(selectId, t) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
-    const currentValue = select.value;
-
-    const selectOption = select.querySelector('option[value="selecciona"]');
-    if (selectOption) selectOption.textContent = t.selectStyle;
-
-    Object.keys(t.styles).forEach(key => {
-        const option = select.querySelector(`option[value="${key}"]`);
-        if (option) option.textContent = t.styles[key];
-    });
-
-    select.value = currentValue;
-}
-
-// ==========================================
-// 1. IMPLEMENTACIÓN BYOP (Auth Flow)
+// 1. INICIALIZACIÓN
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('preferred_language') || 'es';
-    document.getElementById('languageSelect').value = savedLang;
+    if(document.getElementById('languageSelect')) document.getElementById('languageSelect').value = savedLang;
 
     const savedKey = localStorage.getItem('pollinations_api_key');
-    if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
-
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const apiKey = hashParams.get('api_key');
-    if (apiKey) {
-        document.getElementById('apiKeyInput').value = apiKey;
-        localStorage.setItem('pollinations_api_key', apiKey);
-        window.history.replaceState(null, null, window.location.pathname + window.location.search);
-
-        // Mostrar notificación de éxito
-        const t = translations[savedLang];
-        setTimeout(() => showToast(t.apiKeySuccess), 500);
-    }
+    if (savedKey && document.getElementById('apiKeyInput')) document.getElementById('apiKeyInput').value = savedKey;
 
     fetchAndPopulateModels().then(() => {
         changeLanguage(savedLang);
     });
 
-    document.getElementById('img_model').addEventListener('change', () => {
-        const t = translations[currentLang];
-        const val = document.getElementById('img_model').value;
-        const isEditor = isModelEditor(val);
-        document.title = isEditor ? t.titleEditor : t.title;
-        document.getElementById('img_title').textContent = isEditor ? t.imageEditorTitle : t.imageGeneratorTitle;
+    document.getElementById('img_model').addEventListener('change', (e) => {
+        const isEditor = isModelEditor(e.target.value);
+        document.getElementById('edit-section').style.display = (isEditor && currentImageUrl) ? 'block' : 'none';
     });
+
+    document.getElementById('img_ratio').addEventListener('change', updateBoxSize);
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    if(dropZone) {
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+        };
+        fileInput.onchange = (e) => { if (e.target.files[0]) uploadFile(e.target.files[0]); };
+    }
 
     initSlider();
 });
 
-// Función auxiliar para identificar modelos de edición
-function isModelEditor(modelName) {
-    const knownEditors = ['nanobanana', 'kontext', 'seedream-pro', 'gptimage', 'nanobanana-pro', 'gptimage-large', 'klein-large', 'zimage'];
-    return editorModels.includes(modelName) || knownEditors.includes(modelName);
-}
-
-function initSlider() {
-    const slider = document.getElementById('comparison-slider');
-    const container = document.getElementById('imageComparisonContainer');
-    const wrapper = document.getElementById('new-image-wrapper');
-    const newImg = document.getElementById('new-comparison-image');
-
-    if (!slider) return;
-
-    let isResizing = false;
-
-    const onMove = (e) => {
-        if (!isResizing) return;
-        let x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        let rect = container.getBoundingClientRect();
-        let position = ((x - rect.left) / rect.width) * 100;
-
-        if (position >= 0 && position <= 100) {
-            slider.style.left = position + "%";
-            wrapper.style.width = position + "%";
-        }
-    };
-
-    slider.addEventListener('mousedown', () => isResizing = true);
-    window.addEventListener('mouseup', () => isResizing = false);
-    window.addEventListener('mousemove', onMove);
-
-    slider.addEventListener('touchstart', () => isResizing = true);
-    window.addEventListener('touchend', () => isResizing = false);
-    window.addEventListener('touchmove', onMove);
-
-    // Ajustar tamaño del slider cuando cambie el contenedor
-    const observer = new ResizeObserver(() => {
-        newImg.style.width = container.offsetWidth + "px";
-    });
-    observer.observe(container);
-}
-
-function startAuthFlow() {
-    const redirectUrl = window.location.href.split('#')[0];
-    window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
-}
-
-function showToast(message) {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    toast.textContent = message;
-    toast.style.display = 'block';
-    setTimeout(() => {
-        toast.style.display = 'none';
-    }, 3500);
-}
-
-function saveKeyLocally() {
-    const key = document.getElementById('apiKeyInput').value;
-    localStorage.setItem('pollinations_api_key', key);
-}
-
-function getApiKey() {
-    return document.getElementById('apiKeyInput').value.trim();
-}
-
 // ==========================================
-// 2. LOGICA DE MODELOS
+// 2. CONTROLES DE ARCHIVO (CARGA / DESCARGA / ABRIR)
 // ==========================================
 
-async function fetchAndPopulateModels() {
-    populateSelects(FALLBACK_MODELS);
+async function uploadFile(file) {
+    if (isUploading) return;
+    const status = document.getElementById('uploadStatus');
+    isUploading = true;
+    status.style.display = 'block';
+    status.textContent = translations[currentLang].uploading;
+
+    const formData = new FormData();
+    formData.append('fileToUpload', file);
+    formData.append('reqtype', 'fileupload');
+    formData.append('time', '1h'); 
+
     try {
-        const response = await fetch(MODELS_URL);
-        if (!response.ok) throw new Error("Error HTTP " + response.status);
-        const models = await response.json();
-        populateSelects(models);
-    } catch (error) {
-        console.warn("Usando modelos locales por error de conexión:", error);
-    }
-}
+        const response = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+            method: 'POST',
+            body: formData
+        });
 
-function populateSelects(models) {
-    const imgSelect = document.getElementById('img_model');
-    const vidSelect = document.getElementById('vid_model');
-    const currentImg = imgSelect.value;
-    const currentVid = vidSelect.value;
+        if (response.ok) {
+            const url = (await response.text()).trim();
+            currentImageUrl = url;
+            originalImageUrl = url;
+            
+            status.textContent = translations[currentLang].uploadSuccess;
+            status.style.color = "#28a745";
+            
+            document.getElementById('img-preview').src = url;
+            document.getElementById('img-preview').style.display = 'block';
+            document.getElementById('img-container').style.display = 'flex';
+            document.getElementById('zoom-area').style.display = 'flex';
+            document.getElementById('img-buttons').style.display = 'flex';
 
-    imgSelect.innerHTML = "";
-    vidSelect.innerHTML = "";
-    editorModels = [];
-
-    models.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.name;
-        option.textContent = model.description || model.name;
-
-        if (model.output_modalities.includes("image")) {
-            imgSelect.appendChild(option.cloneNode(true));
-            // Identificar modelos editores (text + image)
-            if (model.input_modalities && model.input_modalities.includes("text") && model.input_modalities.includes("image")) {
-                editorModels.push(model.name);
-            }
+            updateBoxSize();
+            const model = document.getElementById('img_model').value;
+            if (isModelEditor(model)) document.getElementById('edit-section').style.display = 'block';
+            resetView();
         }
-        if (model.output_modalities.includes("video")) vidSelect.appendChild(option.cloneNode(true));
-    });
-
-    if (currentImg && imgSelect.querySelector(`option[value="${currentImg}"]`)) imgSelect.value = currentImg;
-    else if (imgSelect.options.length > 0) imgSelect.selectedIndex = 0;
-
-    // Para video: respetar selección previa o elegir el mejor modelo disponible
-    if (currentVid && vidSelect.querySelector(`option[value="${currentVid}"]`)) {
-        vidSelect.value = currentVid;
-    } else {
-        // Intentar seleccionar el primer modelo preferido que esté disponible
-        let selected = false;
-        for (const preferred of PREFERRED_VIDEO_MODELS) {
-            const opt = vidSelect.querySelector(`option[value="${preferred}"]`);
-            if (opt) { vidSelect.value = preferred; selected = true; break; }
-        }
-        if (!selected && vidSelect.options.length > 0) vidSelect.selectedIndex = 0;
-    }
-}
-
-// ==========================================
-// 3. PAN & ZOOM LOGIC
-// ==========================================
-
-function updateScale(newScale) {
-    scale = parseFloat(newScale);
-    applyTransform();
-}
-
-function startDrag(e) {
-    e.preventDefault();
-    isDragging = true;
-    startX = e.clientX - pointX;
-    startY = e.clientY - pointY;
-    document.getElementById('img-container').style.cursor = "grabbing";
-}
-
-function drag(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-    pointX = e.clientX - startX;
-    pointY = e.clientY - startY;
-    applyTransform();
-}
-
-function endDrag() {
-    isDragging = false;
-    document.getElementById('img-container').style.cursor = "grab";
-}
-
-function applyTransform() {
-    const img = document.getElementById('img-preview');
-    img.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
-}
-
-function resetView() {
-    scale = 1; pointX = 0; pointY = 0;
-    document.getElementById('scale-slider').value = 1;
-    applyTransform();
-    // Resetear slider
-    document.getElementById('comparison-slider').style.left = "50%";
-    document.getElementById('new-image-wrapper').style.width = "50%";
-}
-
-// ==========================================
-// 4. GENERACIÓN Y CARGA ROBUSTA
-// ==========================================
-
-// Función para intentar cargar una imagen con/sin CORS
-function tryLoadImage(imageUrl, useCors = false) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        if (useCors) img.crossOrigin = "Anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = imageUrl;
-    });
-}
-
-// Función para usar proxy si falla la carga directa
-function getProxiedUrl(url) {
-    return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-}
-
-async function loadImageWithFallback(url, onSuccess, onError) {
-    try {
-        // 1. Intento directo
-        await tryLoadImage(url, false);
-        onSuccess(url);
     } catch (e) {
-        try {
-            // 2. Intento con CORS
-            await tryLoadImage(url, true);
-            onSuccess(url);
-        } catch (corsE) {
-            try {
-                // 3. Intento con Proxy
-                const proxied = getProxiedUrl(url);
-                await tryLoadImage(proxied, false);
-                onSuccess(proxied);
-            } catch (proxyE) {
-                onError();
-            }
-        }
-    }
-}
-
-function generateImage() {
-    const promptValue = document.getElementById('img_prompt').value.trim();
-    if (!promptValue) return alert(translations[currentLang].promptRequiredAlert || "Prompt required");
-
-    const style = getStyleName(document.getElementById('img_style').value);
-    const model = document.getElementById('img_model').value;
-    const key = getApiKey();
-    if (!key) {
-        alert(translations[currentLang].apiKeyRequired);
-        document.getElementById('apiKeyInput').focus();
-        return;
-    }
-
-    const ratioVal = document.getElementById('img_ratio').value;
-    const dims = getImageDims(ratioVal);
-
-    // ESTRATEGIA MODELO.HTML: Prompt limpio + Key + Modelo + Dims
-    const fullPrompt = `${promptValue}, ${style}`;
-    const url = `${GENERATE_URL}${encodeURIComponent(fullPrompt)}?key=${key}&model=${model}&${dims}`;
-
-    document.getElementById('img_loading').style.display = 'block';
-    document.getElementById('img_loading').textContent = translations[currentLang].generatingImage;
-    document.getElementById('img-container').style.display = 'none';
-    document.getElementById('imageComparisonContainer').style.display = 'none';
-    document.getElementById('zoom-area').style.display = 'none';
-    document.getElementById('edit-section').style.display = 'none';
-    document.getElementById('img-buttons').style.display = 'none';
-    document.getElementById('comparison-buttons').style.display = 'none';
-
-    // Asegurar que los controles estén habilitados
-    toggleConfigControls(true);
-    resetView();
-
-    loadImageWithFallback(url, (finalUrl) => {
-        document.getElementById('img_loading').style.display = 'none';
-        document.getElementById('img-container').style.display = 'flex';
-        const img = document.getElementById('img-preview');
-        img.style.display = 'block';
-        img.src = finalUrl;
-
-        document.getElementById('zoom-area').style.display = 'flex';
-        document.getElementById('img-buttons').style.display = 'flex';
-        document.getElementById('comparison-buttons').style.display = 'none';
-
-        currentImageUrl = url; // SIEMPRE guardar la URL LIMPIA para la API
-        originalImageUrl = url;
-        previousImageUrl = url;
-
-        if (isModelEditor(model)) {
-            document.getElementById('edit-section').style.display = 'block';
-        }
-    }, () => {
-        document.getElementById('img_loading').style.display = 'none';
-        alert(currentLang === 'es' ? "Error cargando la imagen." : "Error loading image.");
-    });
-}
-
-function applyEdit() {
-    const changes = document.getElementById('edit_prompt').value.trim();
-    if (!changes) return alert(currentLang === 'es' ? "Describe los cambios" : "Describe the changes");
-
-    const model = document.getElementById('img_model').value;
-    const key = getApiKey();
-    if (!key) {
-        alert(translations[currentLang].apiKeyRequired);
-        return;
-    }
-    const t = translations[currentLang];
-
-    const ratioVal = document.getElementById('img_ratio').value;
-    const dims = getImageDims(ratioVal);
-
-    // ESTRATEGIA MODELO.HTML: Changes + Key + Model + image(currentImageUrl) + Dims
-    const editUrl = `${GENERATE_URL}${encodeURIComponent(changes)}?key=${key}&model=${model}&image=${encodeURIComponent(currentImageUrl)}&${dims}`;
-
-    document.getElementById('img_loading').style.display = 'block';
-    document.getElementById('img_loading').textContent = t.generatingEdit;
-
-    // Inhabilitar controles de configuración durante la edición
-    toggleConfigControls(false);
-
-    loadImageWithFallback(editUrl, (finalUrl) => {
-        document.getElementById('img_loading').style.display = 'none';
-        document.getElementById('img-container').style.display = 'none';
-        document.getElementById('zoom-area').style.display = 'none';
-
-        const originalImg = document.getElementById('original-comparison-image');
-        const editedImg = document.getElementById('new-comparison-image');
-
-        // El original es lo que el usuario estaba viendo justo antes
-        originalImg.src = document.getElementById('img-preview').src;
-        editedImg.src = finalUrl;
-
-        document.getElementById('imageComparisonContainer').style.display = 'block';
-        document.getElementById('img-buttons').style.display = 'none';
-        document.getElementById('comparison-buttons').style.display = 'flex';
-
-        previousImageUrl = currentImageUrl; // La anterior a este edit
-        currentImageUrl = editUrl; // La nueva URL LIMPIA de la API
-
-        // Actualizamos img-preview para que la siguiente comparación sea correcta
-        document.getElementById('img-preview').src = finalUrl;
-    }, () => {
-        document.getElementById('img_loading').style.display = 'none';
-        alert(currentLang === 'es' ? "La edición falló. Prueba con otro cambio." : "Edit failed. Try another change.");
-    });
-}
-
-// ==========================================
-// BARRA DE PROGRESO DE VIDEO
-// ==========================================
-let _vidProgressTimer = null;
-let _vidProgressValue = 0;
-
-function startVideoProgress(labelText) {
-    // Resetear
-    _vidProgressValue = 0;
-    clearInterval(_vidProgressTimer);
-
-    const bar   = document.getElementById('vid_progress_bar');
-    const pct   = document.getElementById('vid_progress_pct');
-    const label = document.getElementById('vid_progress_label');
-    const wrap  = document.getElementById('vid_progress_wrap');
-
-    if (!wrap) return;
-    wrap.style.display = 'block';
-    bar.style.width = '0%';
-    pct.textContent = '0%';
-    label.textContent = labelText || '…';
-
-    // Simular progreso: rápido hasta ~60%, luego más lento hasta ~90%
-    _vidProgressTimer = setInterval(() => {
-        if (_vidProgressValue < 60)       _vidProgressValue += 1.8;
-        else if (_vidProgressValue < 85)  _vidProgressValue += 0.4;
-        else if (_vidProgressValue < 92)  _vidProgressValue += 0.08;
-        // Se detiene cerca de 92% esperando la respuesta real
-
-        _vidProgressValue = Math.min(_vidProgressValue, 92);
-        bar.style.width  = _vidProgressValue.toFixed(1) + '%';
-        pct.textContent  = Math.floor(_vidProgressValue) + '%';
-    }, 280);
-}
-
-function updateVideoProgressLabel(labelText) {
-    const label = document.getElementById('vid_progress_label');
-    if (label) label.textContent = labelText;
-}
-
-function stopVideoProgress(success) {
-    clearInterval(_vidProgressTimer);
-    _vidProgressTimer = null;
-
-    const bar  = document.getElementById('vid_progress_bar');
-    const pct  = document.getElementById('vid_progress_pct');
-    const wrap = document.getElementById('vid_progress_wrap');
-
-    if (!wrap) return;
-
-    if (success) {
-        // Completar al 100% con breve animación
-        _vidProgressValue = 100;
-        bar.style.width  = '100%';
-        pct.textContent  = '100%';
-        bar.style.background = 'linear-gradient(90deg, #28a745, #5cb85c)';
-        bar.style.animation  = 'none';
-        setTimeout(() => { wrap.style.display = 'none'; bar.style.background = ''; bar.style.animation = ''; }, 1200);
-    } else {
-        wrap.style.display = 'none';
-        bar.style.width = '0%';
-        pct.textContent = '0%';
-    }
-}
-
-async function generateVideo() {
-    const prompt = document.getElementById('vid_prompt').value;
-    const style = getStyleName(document.getElementById('vid_style').value);
-    const dims = getVideoDims(document.getElementById('vid_ratio').value);
-    const time = getDuration(document.getElementById('vid_time').value);
-    const key = getApiKey();
-    if (!key) {
-        alert(translations[currentLang].apiKeyRequired);
-        return;
-    }
-    const seed = Math.floor(Math.random() * 9999);
-    const source = document.querySelector('input[name="vid_source"]:checked').value;
-
-    const vidSelect = document.getElementById('vid_model');
-    const selectedModel = vidSelect.value;
-    const availableOptions = Array.from(vidSelect.options).map(o => o.value);
-
-    // Cola: modelo elegido primero; luego los preferidos que estén disponibles
-    const modelsQueue = [
-        selectedModel,
-        ...PREFERRED_VIDEO_MODELS.filter(m => m !== selectedModel && availableOptions.includes(m))
-    ];
-
-    // Parámetros de dimensiones
-    const dimMatch = dims.match(/width=(\d+)&height=(\d+)/);
-    const widthParam  = dimMatch ? `&width=${dimMatch[1]}`  : '';
-    const heightParam = dimMatch ? `&height=${dimMatch[2]}` : '';
-
-    // Parámetro de imagen de referencia
-    let imageParam = '';
-    if (source === 'image' && currentImageUrl) {
-        imageParam = `&image=${encodeURIComponent(currentImageUrl)}`;
-    } else if (source === 'original' && originalImageUrl) {
-        imageParam = `&image=${encodeURIComponent(originalImageUrl)}`;
-    }
-
-    // Mostrar loading, ocultar reproductores anteriores
-    const loadingEl = document.getElementById('vid_loading');
-    const videoEl   = document.getElementById('vid-player');
-    const iframe    = document.getElementById('vid-iframe');
-    loadingEl.style.display = 'block';
-    if (videoEl) { videoEl.style.display = 'none'; videoEl.src = ''; }
-    if (iframe)  { iframe.style.display  = 'none'; iframe.src  = ''; }
-
-    // Iniciar barra de progreso simulada
-    startVideoProgress(translations[currentLang].generatingVideo);
-
-    const fullPrompt = encodeURIComponent(`${prompt},${style} style`);
-    let lastError = null;
-
-    for (let i = 0; i < modelsQueue.length; i++) {
-        const model = modelsQueue[i];
-
-        // Actualizar selector y mensaje de estado
-        if (vidSelect.querySelector(`option[value="${model}"]`)) vidSelect.value = model;
-        const statusMsg = i === 0
-            ? translations[currentLang].generatingVideo
-            : `${translations[currentLang].generatingVideo} (${model}…)`;
-        loadingEl.textContent = statusMsg;
-        if (i > 0) {
-            // Reiniciar barra en cada reintento con nuevo modelo
-            startVideoProgress(statusMsg);
-        } else {
-            updateVideoProgressLabel(translations[currentLang].generatingVideo);
-        }
-
-        const apiUrl = `https://gen.pollinations.ai/video/${fullPrompt}?duration=${time}&model=${model}&seed=${seed}${widthParam}${heightParam}${imageParam}`;
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${key}` }
-            });
-
-            if (!response.ok) {
-                let errMsg = `Error ${response.status}`;
-                try {
-                    const errJson = await response.json();
-                    errMsg = errJson.message || errJson.error?.message || errMsg;
-                } catch(e) {}
-
-                // 429 o 500 → reintentar con siguiente modelo si hay
-                if ((response.status === 429 || response.status === 500) && i < modelsQueue.length - 1) {
-                    console.warn(`Modelo "${model}" falló (${response.status}), probando siguiente…`);
-                    lastError = errMsg;
-                    continue;
-                }
-                throw new Error(errMsg);
-            }
-
-            // ✅ Éxito: mostrar video como blob
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-
-            if (videoEl && videoEl._blobUrl) URL.revokeObjectURL(videoEl._blobUrl);
-
-            if (videoEl) {
-                videoEl._blobUrl = blobUrl;
-                videoEl.src = blobUrl;
-                videoEl.style.display = 'block';
-                videoEl.load();
-                videoEl.play().catch(() => {});
-            } else if (iframe) {
-                iframe.src = blobUrl;
-                iframe.style.display = 'block';
-            }
-
-            stopVideoProgress(true);
-            loadingEl.style.display = 'none';
-            return;
-
-        } catch (error) {
-            lastError = error.message;
-            if (i < modelsQueue.length - 1) {
-                console.warn(`Modelo "${model}" falló, probando siguiente…`, error.message);
-                continue;
-            }
-        }
-    }
-
-    // Todos los modelos fallaron
-    stopVideoProgress(false);
-    loadingEl.style.display = 'none';
-    console.error('Todos los modelos de video fallaron. Último error:', lastError);
-    alert((currentLang === 'es'
-        ? '⚠️ No se pudo generar el video con ningún modelo disponible.\n\nÚltimo error: '
-        : '⚠️ Could not generate the video with any available model.\n\nLast error: ')
-        + lastError);
-}
-
-function toggleVideoPrompt(show) {
-    const promptArea = document.getElementById('vid_prompt');
-    const lbl = document.getElementById('lbl_vid_prompt');
-
-    if (show) {
-        promptArea.disabled = false;
-        promptArea.style.opacity = "1";
-    } else {
-        const source = document.querySelector('input[name="vid_source"]:checked').value;
-        const imgToUse = (source === 'image') ? currentImageUrl : originalImageUrl;
-
-        if (!imgToUse) {
-            alert(translations[currentLang].noImageAlert || "No image available.");
-            document.querySelector('input[name="vid_source"][value="prompt"]').checked = true;
-            return;
-        }
-    }
+        status.textContent = translations[currentLang].uploadError;
+    } finally { isUploading = false; }
 }
 
 async function downloadImage(type = 'current') {
-    let urlToDownload = currentImageUrl;
-    if (type === 'original') urlToDownload = previousImageUrl;
+    let url = (type === 'original') ? previousImageUrl : currentImageUrl;
+    if (!url) return;
 
-    if (!urlToDownload) return;
-
-    const btn = document.getElementById('btn-download');
+    const t = translations[currentLang];
+    const btn = document.querySelector(type === 'original' ? '#comparison-buttons button:nth-child(3)' : '#btn-download');
     const originalText = btn.textContent;
-    btn.textContent = translations[currentLang].downloadingStatus || "Descargando...";
-    btn.disabled = true;
 
     try {
-        let response;
-        try {
-            response = await fetch(urlToDownload);
-        } catch (e) {
-            response = await fetch(getProxiedUrl(urlToDownload));
-        }
-
-        if (!response.ok) throw new Error("Error en red");
-
+        btn.textContent = t.downloading;
+        const response = await fetch(url);
         const blob = await response.blob();
-        const blobUrl = window.URL.createObjectURL(blob);
-
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `pollinations_${Date.now()}.jpg`;
+        a.download = `pollinations_${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
-
         document.body.removeChild(a);
-        window.URL.revokeObjectURL(blobUrl);
-
-    } catch (error) {
-        console.error("Error descargando:", error);
-        window.open(urlToDownload, '_blank');
+        URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+        window.open(url, '_blank');
     } finally {
         btn.textContent = originalText;
-        btn.disabled = false;
     }
 }
 
 function openImage(type = 'current') {
-    let urlToOpen = currentImageUrl;
-    if (type === 'original') urlToOpen = previousImageUrl;
-    if (urlToOpen) window.open(urlToOpen, '_blank');
+    let url = (type === 'original') ? previousImageUrl : currentImageUrl;
+    if (url) window.open(url, '_blank');
 }
 
 // ==========================================
-// 5. UTILIDADES UI (Tabs, Mappers, etc)
+// 3. LOGICA DE IMAGEN Y DIMENSIONES
 // ==========================================
-
-function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.content').forEach(c => c.classList.add('hidden'));
-    if (tab === 'image') {
-        document.getElementById('tab-image').classList.remove('hidden');
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        updateBoxSize();
-    } else {
-        document.getElementById('tab-video').classList.remove('hidden');
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
-    }
-}
-
-function clearPrompt(id) { document.getElementById(id).value = ""; }
 
 function updateBoxSize() {
     const val = parseInt(document.getElementById('img_ratio').value);
     const box = document.getElementById('img-container');
     const compBox = document.getElementById('imageComparisonContainer');
+    const newImg = document.getElementById('new-comparison-image');
     let w = 400, h = 400;
 
     switch (val) {
@@ -954,72 +191,235 @@ function updateBoxSize() {
         case 5: w = 600; h = 400; break;
         case 6: w = 267; h = 400; break;
     }
-    box.style.width = w + "px";
-    box.style.height = h + "px";
-    compBox.style.width = w + "px";
-    compBox.style.height = h + "px";
+    box.style.width = w + "px"; box.style.height = h + "px";
+    compBox.style.width = w + "px"; compBox.style.height = h + "px";
+    if(newImg) newImg.style.width = w + "px";
     resetView();
 }
 
-// --- MAPPERS ---
-function getStyleName(val) {
-    const styles = {
-        0: "photography", 1: "3D", 2: "watercolor", 3: "street-art", 4: "Digital Art",
-        5: "Art-Nouveau", 6: "pop-art", 7: "Baroque", 8: "black and white painting",
-        9: "botero", 10: "cartoon", 11: "comic", 12: "Cubism", 13: "pencil-sketch",
-        14: "Disney", 15: "Expressionism", 16: "fantasy-art", 17: "Fauvism",
-        19: "Futurista", 20: "Hyper-Realistic", 21: "illustration", 22: "Impressionism",
-        23: "isometric", 24: "Ukiyo-e", 25: "Japanese Woodblock", 26: "Manga",
-        27: "Minimalism", 28: "neon", 29: "oil-painting", 30: "origami",
-        31: "abstract painting", 32: "pixar", 33: "pixel-art", 34: "Claymation",
-        35: "realism", 36: "Renaissance", 37: "Surrealism", 38: "texture",
-        39: "van-gogh", 40: "vintage", 41: "graffiti", 42: "stained-glass",
-        43: "mosaic", 44: "art-deco", 45: "steampunk", 46: "cyberpunk",
-        47: "vaporwave", 48: "low-poly", 49: "sketch", 50: "charcoal"
+async function fetchAndPopulateModels() {
+    populateSelects(FALLBACK_MODELS);
+    try {
+        const response = await fetch(MODELS_URL);
+        const models = await response.json();
+        populateSelects(models);
+    } catch (e) {}
+}
+
+function populateSelects(models) {
+    const imgSelect = document.getElementById('img_model');
+    const vidSelect = document.getElementById('vid_model');
+    imgSelect.innerHTML = ""; vidSelect.innerHTML = "";
+    editorModels = [];
+
+    models.forEach(model => {
+        const suffix = model.paid_only ? " (pago)" : "";
+        const displayName = (model.description || model.name) + suffix;
+        const option = new Option(displayName, model.name);
+
+        if (model.output_modalities.includes("image")) {
+            imgSelect.add(option.cloneNode(true));
+            if (model.input_modalities && model.input_modalities.includes("image")) editorModels.push(model.name);
+        }
+        if (model.output_modalities.includes("video")) vidSelect.add(option.cloneNode(true));
+    });
+}
+
+function generateImage() {
+    const prompt = document.getElementById('img_prompt').value.trim();
+    const key = getApiKey();
+    if (!key) return alert(translations[currentLang].apiKeyRequired);
+    const model = document.getElementById('img_model').value;
+    const url = `${GENERATE_URL}${encodeURIComponent(prompt)}?key=${key}&model=${model}&${getImageDims(document.getElementById('img_ratio').value)}`;
+
+    document.getElementById('img_loading').style.display = 'block';
+    document.getElementById('img-container').style.display = 'none';
+
+    const img = new Image();
+    img.onload = () => {
+        document.getElementById('img_loading').style.display = 'none';
+        document.getElementById('img-container').style.display = 'flex';
+        document.getElementById('img-preview').src = url;
+        document.getElementById('img-preview').style.display = 'block';
+        document.getElementById('zoom-area').style.display = 'flex';
+        document.getElementById('img-buttons').style.display = 'flex';
+        currentImageUrl = url; originalImageUrl = url;
+        updateBoxSize();
+        if (isModelEditor(model)) document.getElementById('edit-section').style.display = 'block';
+        resetView();
     };
-    return styles[val] || "photography";
+    img.src = url;
 }
 
-function getImageDims(val) {
-    const dims = {
-        0: "width=1024&height=1024", 1: "width=768&height=1024", 2: "width=1024&height=768",
-        3: "width=2048&height=1152", 4: "width=1152&height=2048", 5: "width=2048&height=1365",
-        6: "width=1365&height=2048"
+function applyEdit() {
+    const changes = document.getElementById('edit_prompt').value.trim();
+    const key = getApiKey();
+    const model = document.getElementById('img_model').value;
+    const url = `${GENERATE_URL}${encodeURIComponent(changes)}?key=${key}&model=${model}&image=${encodeURIComponent(currentImageUrl)}&${getImageDims(document.getElementById('img_ratio').value)}`;
+
+    document.getElementById('img_loading').style.display = 'block';
+    const img = new Image();
+    img.onload = () => {
+        document.getElementById('img_loading').style.display = 'none';
+        document.getElementById('img-container').style.display = 'none';
+        document.getElementById('original-comparison-image').src = document.getElementById('img-preview').src;
+        document.getElementById('new-comparison-image').src = url;
+        document.getElementById('imageComparisonContainer').style.display = 'block';
+        document.getElementById('img-buttons').style.display = 'none';
+        document.getElementById('comparison-buttons').style.display = 'flex';
+        previousImageUrl = currentImageUrl; currentImageUrl = url;
+        document.getElementById('img-preview').src = url;
+        updateBoxSize();
     };
-    return dims[val] || "width=1024&height=1024";
+    img.src = url;
 }
 
-function getVideoDims(val) {
-    return getImageDims(val);
+// ==========================================
+// 4. LOGICA DE VIDEO
+// ==========================================
+
+async function generateVideo() {
+    const prompt = document.getElementById('vid_prompt').value || "cinematic motion";
+    const time = getDuration(document.getElementById('vid_time').value);
+    const key = getApiKey();
+    if (!key) return alert(translations[currentLang].apiKeyRequired);
+
+    const source = document.querySelector('input[name="vid_source"]:checked').value;
+    const vidSelect = document.getElementById('vid_model');
+    const selectedModel = vidSelect.value;
+    const modelsQueue = [selectedModel, ...PREFERRED_VIDEO_MODELS.filter(m => m !== selectedModel)];
+
+    let imageParam = '';
+    if (source === 'image' && currentImageUrl) imageParam = `&image=${encodeURIComponent(currentImageUrl)}`;
+    else if (source === 'original' && originalImageUrl) imageParam = `&image=${encodeURIComponent(originalImageUrl)}`;
+
+    document.getElementById('vid_loading').style.display = 'block';
+    startVideoProgress(translations[currentLang].generatingVideo);
+
+    for (let model of modelsQueue) {
+        const apiUrl = `https://gen.pollinations.ai/video/${encodeURIComponent(prompt)}?duration=${time}&model=${model}&seed=${Math.floor(Math.random()*999)}&nologo=true${imageParam}`;
+        try {
+            const response = await fetch(apiUrl, { headers: { 'Authorization': `Bearer ${key}` } });
+            if (!response.ok) continue;
+            const blob = await response.blob();
+            const videoEl = document.getElementById('vid-player');
+            videoEl.src = URL.createObjectURL(blob);
+            videoEl.style.display = 'block';
+            videoEl.play();
+            stopVideoProgress(true);
+            document.getElementById('vid_loading').style.display = 'none';
+            return;
+        } catch (e) {}
+    }
+    stopVideoProgress(false);
+    document.getElementById('vid_loading').style.display = 'none';
+    alert("Error en video.");
 }
 
-function getDuration(val) {
-    return [2, 4, 6, 8, 10][val] || 2;
+function toggleVideoPrompt(isPromptOnly) {
+    if (!isPromptOnly) {
+        const source = document.querySelector('input[name="vid_source"]:checked').value;
+        const img = (source === 'image') ? currentImageUrl : originalImageUrl;
+        if (!img) {
+            alert(translations[currentLang].noImageAlert);
+            document.querySelector('input[name="vid_source"][value="prompt"]').checked = true;
+            return;
+        }
+    }
+    document.getElementById('vid_prompt').disabled = false;
+}
+
+// ==========================================
+// 5. UTILIDADES
+// ==========================================
+
+function clearPrompt(id) { document.getElementById(id).value = ""; }
+
+let _vidProgressTimer = null;
+let _vidProgressValue = 0;
+
+function startVideoProgress(labelText) {
+    _vidProgressValue = 0;
+    const bar = document.getElementById('vid_progress_bar');
+    const wrap = document.getElementById('vid_progress_wrap');
+    if(wrap) wrap.style.display = 'block';
+    _vidProgressTimer = setInterval(() => {
+        if (_vidProgressValue < 90) _vidProgressValue += 1.5;
+        if(bar) bar.style.width = _vidProgressValue + '%';
+        document.getElementById('vid_progress_pct').textContent = Math.floor(_vidProgressValue) + '%';
+    }, 300);
+}
+
+function stopVideoProgress(success) {
+    clearInterval(_vidProgressTimer);
+    if(success) {
+        document.getElementById('vid_progress_bar').style.width = '100%';
+        document.getElementById('vid_progress_pct').textContent = '100%';
+        setTimeout(() => document.getElementById('vid_progress_wrap').style.display = 'none', 1000);
+    } else {
+        document.getElementById('vid_progress_wrap').style.display = 'none';
+    }
+}
+
+function updateScale(v) { scale = v; applyTransform(); }
+function startDrag(e) { isDragging = true; startX = e.clientX - pointX; startY = e.clientY - pointY; }
+function drag(e) { if(isDragging) { pointX = e.clientX - startX; pointY = e.clientY - startY; applyTransform(); } }
+function endDrag() { isDragging = false; }
+function applyTransform() { 
+    const img = document.getElementById('img-preview');
+    if(img) img.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; 
+}
+
+function resetView() {
+    scale = 1; pointX = 0; pointY = 0;
+    if(document.getElementById('scale-slider')) document.getElementById('scale-slider').value = 1;
+    applyTransform();
+}
+
+function isModelEditor(m) { return editorModels.includes(m); }
+function getApiKey() { return document.getElementById('apiKeyInput').value.trim(); }
+function getImageDims(v) {
+    const dims = { 0: "width=1024&height=1024", 1: "width=768&height=1024", 2: "width=1024&height=768", 3: "width=2048&height=1152", 4: "width=1152&height=2048", 5: "width=2048&height=1365", 6: "width=1365&height=2048" };
+    return dims[v] || "width=1024&height=1024";
+}
+function getDuration(v) { return [2, 4, 6, 8, 10][v] || 2; }
+
+function switchTab(t) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(t)));
+    document.querySelectorAll('.content').forEach(c => c.classList.toggle('hidden', !c.id.includes(t)));
+}
+
+function initSlider() {
+    const slider = document.getElementById('comparison-slider');
+    if (!slider) return;
+    let resizing = false;
+    slider.onmousedown = () => resizing = true;
+    window.onmouseup = () => resizing = false;
+    window.onmousemove = (e) => {
+        if(!resizing) return;
+        const rect = document.getElementById('imageComparisonContainer').getBoundingClientRect();
+        let pos = ((e.clientX - rect.left) / rect.width) * 100;
+        if(pos >= 0 && pos <= 100) {
+            slider.style.left = pos + "%";
+            document.getElementById('new-image-wrapper').style.width = pos + "%";
+        }
+    };
+}
+
+function changeLanguage(l) {
+    currentLang = l; localStorage.setItem('preferred_language', l);
 }
 
 function resetToGeneration() {
-    toggleConfigControls(true);
     document.getElementById('edit-section').style.display = 'none';
     document.getElementById('imageComparisonContainer').style.display = 'none';
     document.getElementById('img-container').style.display = 'flex';
-    document.getElementById('img-buttons').style.display = 'flex';
-    document.getElementById('comparison-buttons').style.display = 'none';
-    document.getElementById('zoom-area').style.display = 'flex';
-
-    // Volvieron a la imagen original
-    const img = document.getElementById('img-preview');
-    img.src = originalImageUrl;
+    document.getElementById('img-preview').src = originalImageUrl;
     currentImageUrl = originalImageUrl;
-    resetView();
+    updateBoxSize();
 }
 
-function toggleConfigControls(enabled) {
-    const container = document.getElementById('gen-controls-group');
-    if (!container) return;
-    const inputs = container.querySelectorAll('select, textarea, button');
-    inputs.forEach(input => {
-        input.disabled = !enabled;
-        input.style.opacity = enabled ? "1" : "0.6";
-        input.style.pointerEvents = enabled ? "auto" : "none";
-    });
+function startAuthFlow() {
+    const redirectUrl = window.location.href.split('#')[0];
+    window.location.href = `https://enter.pollinations.ai/authorize?redirect_url=${encodeURIComponent(redirectUrl)}`;
 }

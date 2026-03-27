@@ -32,6 +32,14 @@
                         <input type="password" id="apiKeyInput" placeholder="plln_sk_..." onchange="saveKeyLocally()">
                         <button id="getApiKeyBtn" onclick="startAuthFlow()">🔑 Obtener</button>
                     </div>
+					<div class="api-key-container" style="background: #fff4e6; border-color: #ffe8cc; margin-top: 5px;">
+					<label>Cargar Imagen Local (Opcional)</label>
+					<div id="dropZone" class="drop-zone">
+					☁️ Arrastra imagen aquí o haz clic
+					<input type="file" id="fileInput" hidden accept="image/*">
+					</div>
+			</div>
+    <div id="uploadStatus" class="status-msg" style="display: none;"></div>
                 </div>
 
                 <div id="gen-controls-group">
